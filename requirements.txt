@@ -1,0 +1,6 @@
+Flask==3.0.3
+gunicorn==22.0.0
+twilio==9.2.3
+google-cloud-firestore==2.15.0
+Werkzeug==3.0.3
+pydantic-settings==2.4.0

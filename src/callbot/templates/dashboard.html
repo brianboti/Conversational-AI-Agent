@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Call Transcripts</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand">Call Transcripts</div>
+    <div class="right" style="margin-left:auto">
+      <button class="btn" id="refresh">Refresh</button>
+      <button class="btn" id="download">Download CSV</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="Search transcript text, Call SID, or number…" />
+      <select id="sort">
+        <option value="time-desc">Newest first</option>
+        <option value="time-asc">Oldest first</option>
+        <option value="conf-desc">Highest confidence</option>
+        <option value="conf-asc">Lowest confidence</option>
+      </select>
+      <select id="pagesize">
+        <option>10</option><option selected>25</option><option>50</option><option>100</option>
+      </select>
+      <div class="status" id="status">—</div>
+    </div>
+
+    <div style="overflow:auto">
+      <table>
+        <thead>
+          <tr>
+            <th class="caps">Time (UTC)</th>
+            <th class="caps">Call SID</th>
+            <th class="caps">From</th>
+            <th class="caps">To</th>
+            <th class="caps">Confidence</th>
+            <th class="caps">Transcript</th>
+            <th class="caps">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <div class="empty" id="empty" style="display:none">No results</div>
+    </div>
+
+    <div class="pager">
+      <button class="btn" id="prev">Prev</button>
+      <div class="status" id="pager">Page 1</div>
+      <button class="btn" id="next">Next</button>
+    </div>
+  </div>
+</main>
+
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+</body>
+</html>
