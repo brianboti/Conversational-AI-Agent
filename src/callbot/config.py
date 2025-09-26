@@ -1,9 +1,7 @@
 from __future__ import annotations
-
 import os
 from typing import Optional, Set
 from pydantic_settings import BaseSettings
-
 
 class Settings(BaseSettings):
     # Server
@@ -15,18 +13,23 @@ class Settings(BaseSettings):
     TWILIO_AUTH_TOKEN: str = os.getenv("TWILIO_AUTH_TOKEN", "").strip()
     APP_ALLOW_INSECURE: bool = os.getenv("APP_ALLOW_INSECURE", "0") == "1"
 
-    # Voice UX
-    APP_GREETING: str = os.getenv(
-        "APP_GREETING",
-        "Hello, this is Brian. Thanks for calling my project demo. Please share your message when you’re ready.",
+    # Voice prompts (single source of truth)
+    APP_GREETING_TTS: str = os.getenv(
+        "APP_GREETING_TTS",
+        "Hello, you’ve reached Brian’s AI assistant. Thank you for calling.",
     )
-    APP_FAREWELL: str = os.getenv("APP_FAREWELL", "Thanks for your time—have a great day.")
-    APP_STATIC_REPLY_TTS: str = os.getenv("APP_STATIC_REPLY_TTS", "Thank you. Your message has been recorded.")
-    APP_STATIC_REPLY_MP3: str = os.getenv("APP_STATIC_REPLY_MP3", "/static/reply.mp3")
+    APP_SPEAK_NOW_TTS: str = os.getenv(
+        "APP_SPEAK_NOW_TTS",
+        "When you’re ready, please share your message.",
+    )
+    APP_FAREWELL_TTS: str = os.getenv(
+        "APP_FAREWELL_TTS",
+        "Thank you for sharing your message. Goodbye, and have a great day.",
+    )
 
-    # STT
+    # Speech recognition settings
     APP_SPEECH_LANG: str = os.getenv("APP_SPEECH_LANG", "en-US")
-    APP_SPEECH_TIMEOUT: str = os.getenv("APP_SPEECH_TIMEOUT", "6")  # "auto" or seconds
+    APP_SPEECH_TIMEOUT: str = os.getenv("APP_SPEECH_TIMEOUT", "2")  # "auto" or seconds
 
     # Optional read API protection
     APP_TRANSCRIPTS_KEY: Optional[str] = os.getenv("APP_TRANSCRIPTS_KEY") or None

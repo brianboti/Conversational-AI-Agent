@@ -15,7 +15,10 @@ from ..utils.twiml import say, to_response
 
 bp = Blueprint("voice", __name__, url_prefix="")
 
-VERIFIER = TwilioRequestVerifier(auth_token=CFG.TWILIO_AUTH_TOKEN, enabled=not CFG.APP_ALLOW_INSECURE)
+VERIFIER = TwilioRequestVerifier(
+    auth_token=CFG.TWILIO_AUTH_TOKEN,
+    enabled=not CFG.APP_ALLOW_INSECURE,
+)
 TRANSCRIPTS = TranscriptRepository()
 
 
@@ -31,6 +34,9 @@ def _validate_twilio() -> bool:
     return VERIFIER.is_valid(request.url, params, sig)
 
 
+# ---------------------------
+# TTS FLOW (single Gather)
+# ---------------------------
 @bp.post("/voice_tts")
 def voice_tts() -> Response:
     if not _validate_twilio():
@@ -38,8 +44,11 @@ def voice_tts() -> Response:
         return _forbid_twiml()
 
     vr = VoiceResponse()
-    say(vr, CFG.APP_GREETING, CFG.APP_SPEECH_LANG)
 
+    # 1) Greeting
+    say(vr, CFG.APP_GREETING_TTS, CFG.APP_SPEECH_LANG)
+
+    # 2) Speak-now + single speech gather
     gather = Gather(
         input="speech",
         action=absolute_url("/handle_speech_tts"),
@@ -48,10 +57,11 @@ def voice_tts() -> Response:
         speech_timeout=CFG.APP_SPEECH_TIMEOUT,
         action_on_empty_result=True,
     )
-    gather.say("Please begin speaking when you’re ready, then pause.", voice="alice", language=CFG.APP_SPEECH_LANG)
+    say(gather, CFG.APP_SPEAK_NOW_TTS, CFG.APP_SPEECH_LANG)
     vr.append(gather)
 
-    say(vr, "I didn’t catch that. Please try again later.", CFG.APP_SPEECH_LANG)
+    # 3) If no speech captured, end politely
+    say(vr, CFG.APP_FAREWELL_TTS, CFG.APP_SPEECH_LANG)
     vr.hangup()
     return to_response(vr)
 
@@ -80,6 +90,7 @@ def handle_speech_tts() -> Response:
         confidence=something_or_none(confidence),
     )
 
+    # Persist transcript (best-effort)
     try:
         doc = {
             "call_sid": call_sid,
@@ -97,13 +108,16 @@ def handle_speech_tts() -> Response:
     except Exception as exc:
         log_event("ERROR", "firestore.save.fail", error=str(exc))
 
+    # Minimal reply then end call
     vr = VoiceResponse()
-    say(vr, CFG.APP_STATIC_REPLY_TTS, CFG.APP_SPEECH_LANG)
-    say(vr, CFG.APP_FAREWELL, CFG.APP_SPEECH_LANG)
+    say(vr, CFG.APP_FAREWELL_TTS, CFG.APP_SPEECH_LANG)
     vr.hangup()
     return to_response(vr)
 
 
+# ---------------------------
+# MP3 FLOW (optional)
+# ---------------------------
 @bp.post("/voice_mp3")
 def voice_mp3() -> Response:
     if not _validate_twilio():
@@ -111,8 +125,11 @@ def voice_mp3() -> Response:
         return _forbid_twiml()
 
     vr = VoiceResponse()
-    say(vr, CFG.APP_GREETING, CFG.APP_SPEECH_LANG)
 
+    # 1) Greeting
+    say(vr, CFG.APP_GREETING_TTS, CFG.APP_SPEECH_LANG)
+
+    # 2) Speak-now + single speech gather
     gather = Gather(
         input="speech",
         action=absolute_url("/handle_speech_mp3"),
@@ -121,10 +138,11 @@ def voice_mp3() -> Response:
         speech_timeout=CFG.APP_SPEECH_TIMEOUT,
         action_on_empty_result=True,
     )
-    gather.say("Please begin speaking when you’re ready, then pause.", voice="alice", language=CFG.APP_SPEECH_LANG)
+    say(gather, CFG.APP_SPEAK_NOW_TTS, CFG.APP_SPEECH_LANG)
     vr.append(gather)
 
-    say(vr, "I did not catch that. Goodbye.", CFG.APP_SPEECH_LANG)
+    # 3) If no speech captured, end politely
+    say(vr, CFG.APP_FAREWELL_TTS, CFG.APP_SPEECH_LANG)
     vr.hangup()
     return to_response(vr)
 
@@ -138,10 +156,20 @@ def handle_speech_mp3() -> Response:
     said = trimmed(request.form.get("SpeechResult"))
     confidence = request.form.get("Confidence")
     call_sid = request.form.get("CallSid")
-    log_event("INFO", "mp3.transcript", call_sid=call_sid, said=something_or_none(said), confidence=something_or_none(confidence))
+    log_event(
+        "INFO",
+        "mp3.transcript",
+        call_sid=call_sid,
+        said=something_or_none(said),
+        confidence=something_or_none(confidence),
+    )
 
     vr = VoiceResponse()
-    vr.play(absolute_url(CFG.APP_STATIC_REPLY_MP3))
-    say(vr, CFG.APP_FAREWELL, CFG.APP_SPEECH_LANG)
+    # Only play if explicitly configured; otherwise keep it minimal
+    mp3 = getattr(CFG, "APP_STATIC_REPLY_MP3", None)
+    if mp3:
+        vr.play(absolute_url(mp3))
+
+    say(vr, CFG.APP_FAREWELL_TTS, CFG.APP_SPEECH_LANG)
     vr.hangup()
     return to_response(vr)
